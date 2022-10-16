@@ -70,10 +70,10 @@ string get_channel_id(str_view channel_name,
     {
          {"key", string(key.begin(), key.end())},
          {"part", "snippet"},
-         {"fields", "items(snippet(channelId,title,channelTitle))"},
+         {"fields", "nextPageToken,items(snippet(channelId,title,channelTitle))"},
          {"type", "channel"},
          {"order", "relevance"},
-         {"maxResults", "1"},
+         {"maxResults", "50"},
          {"q", string(channel_name.begin(), channel_name.end())},
     };
 
@@ -230,6 +230,31 @@ int download_youtube_stats(str_view channel,
             if (search.empty())
             {
                 throw std::runtime_error("[ERROR] Returned json is empty, channel name not found");
+            }
+            else if (search["items"sv].size() != 1)
+            {
+                string buffer;
+                buffer.reserve(1024);
+
+                std::format_to(std::back_inserter(buffer),
+                               "[WARN] Found more than one channelId for channel name '{}', "
+                               "pick one from the list (note: the list is limited to 50 results):\n"sv, channel);
+
+                unsigned counter = 1;
+                for (const auto& item : search["items"sv])
+                {
+                    const auto& snippet = item["snippet"sv];
+                    std::format_to(std::back_inserter(buffer),
+                                   "   {:03}. {} ({}) id: {} - https://www.youtube.com/channel/{}\n"sv,
+                                   counter++,
+                                   snippet["title"sv].get<str_view>(),
+                                   snippet["channelTitle"sv].get<str_view>(),
+                                   snippet["channelId"sv].get<str_view>(),
+                                   snippet["channelId"sv].get<str_view>()
+                    );
+                }
+
+                throw std::runtime_error(buffer);
             }
 
             auto channel_id = search["items"sv][0]["snippet"sv]["channelId"sv].get<str_view>();
