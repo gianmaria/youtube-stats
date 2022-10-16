@@ -327,7 +327,7 @@ int download_youtube_stats(str_view channel,
 
             next_page_token = playlist_items["nextPageToken"sv].get<string>();
 
-            std::this_thread::sleep_for(100ms);
+            std::this_thread::sleep_for(10ms);
         }
 
         if (not save_to_file(output_file, out.dump(2)))
