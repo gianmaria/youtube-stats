@@ -191,155 +191,228 @@ string get_video_info(str_view video_id,
     return resp.text;
 }
 
-bool args_ok(argparse::ArgumentParser& program,
-             int argc, const char* argv[])
+class Arg_Parse_Exception : public std::exception
+{
+public:
+    using super = std::exception;
+
+    explicit Arg_Parse_Exception(const string& message)
+        : super(message.c_str())
+    {
+    }
+
+    explicit Arg_Parse_Exception(const char* message)
+        : super(message)
+    {
+    }
+};
+
+void parse_args(argparse::ArgumentParser& program,
+                int argc,
+                const char* argv[])
 {
     try
     {
+        program = argparse::ArgumentParser("youtube-stat", "1.0.0");
+
+        program.add_description("Youtube Stat\n"
+                                "Download all data about uploaded "
+                                "video for a specific channel name or id.");
+
+        program.add_argument("--name"sv)
+            .help("name of the youtube channel, "
+                  "the one that you can find in the url, "
+                  "e.g. PewDiePie, greymatter, veritasium, "
+                  "MrBeast6000 etc...");
+
+        program.add_argument("--id"sv)
+            .help("id of the channel if name is not available");
+
+        program.add_argument("-o"sv, "--output"sv)
+            .required()
+            .help("specify the output file");
+
+        program.add_argument("--key"sv)
+            .required()
+            .help("your youtube data api key");
+
         program.parse_args(argc, argv);
-        return true;
     }
     catch (const std::runtime_error& err)
     {
-        cout << err.what() << endl;
-        cout << program; // print help
-        return false;
+        throw Arg_Parse_Exception(err.what());
     }
 }
 
-
-int download_youtube_stats(str_view channel,
-                           str_view output_file,
-                           str_view key,
-                           bool by_id = false)
+void download_youtube_stats(str_view channel,
+                            str_view output_file,
+                            str_view key,
+                            bool by_id = false)
 {
-    try
+    njson channel_info;
+
+    if (by_id) // use ChannelId directly
     {
-        njson channel_info;
+        auto channel_info_resp = get_channel_info(channel, key, by_id);
+        channel_info = njson::parse(channel_info_resp);
+    }
+    else // first obtain ChannelId from channel name
+    {
+        auto search_resp = get_channel_id(channel, key);
+        auto search = njson::parse(search_resp);
 
-        if (by_id) // use ChannelId directly
+        if (search.empty())
         {
-            auto channel_info_resp = get_channel_info(channel, key, by_id);
-            channel_info = njson::parse(channel_info_resp);
+            throw std::runtime_error("[ERROR] Returned json is empty, channel name not found");
         }
-        else // first obtain ChannelId from channel name
+        else if (search["items"sv].size() != 1)
         {
-            auto search_resp = get_channel_id(channel, key);
-            auto search = njson::parse(search_resp);
+            string buffer;
+            buffer.reserve(1024);
 
-            if (search.empty())
-            {
-                throw std::runtime_error("[ERROR] Returned json is empty, channel name not found");
-            }
-            else if (search["items"sv].size() != 1)
-            {
-                string buffer;
-                buffer.reserve(1024);
+            std::format_to(std::back_inserter(buffer),
+                           "[WARN] Found more than one channelId for channel name '{}', "
+                           "pick one from the list (note: the list is limited to 50 results):\n"sv, channel);
 
+            unsigned counter = 1;
+            for (const auto& item : search["items"sv])
+            {
+                const auto& snippet = item["snippet"sv];
                 std::format_to(std::back_inserter(buffer),
-                               "[WARN] Found more than one channelId for channel name '{}', "
-                               "pick one from the list (note: the list is limited to 50 results):\n"sv, channel);
-
-                unsigned counter = 1;
-                for (const auto& item : search["items"sv])
-                {
-                    const auto& snippet = item["snippet"sv];
-                    std::format_to(std::back_inserter(buffer),
-                                   "   {:03}. {} ({}) id: {} - https://www.youtube.com/channel/{}\n"sv,
-                                   counter++,
-                                   snippet["title"sv].get<str_view>(),
-                                   snippet["channelTitle"sv].get<str_view>(),
-                                   snippet["channelId"sv].get<str_view>(),
-                                   snippet["channelId"sv].get<str_view>()
-                    );
-                }
-
-                throw std::runtime_error(buffer);
+                               "   {:03}. {} ({}) id: {} - https://www.youtube.com/channel/{}\n"sv,
+                               counter++,
+                               snippet["title"sv].get<str_view>(),
+                               snippet["channelTitle"sv].get<str_view>(),
+                               snippet["channelId"sv].get<str_view>(),
+                               snippet["channelId"sv].get<str_view>()
+                );
             }
 
-            auto channel_id = search["items"sv][0]["snippet"sv]["channelId"sv].get<str_view>();
-
-            auto channel_info_resp = get_channel_info(channel_id, key, true);
-            channel_info = njson::parse(channel_info_resp);
+            throw std::runtime_error(buffer);
         }
 
-        //save_to_file(output_file, channel_info_resp);
+        auto channel_id = search["items"sv][0]["snippet"sv]["channelId"sv].get<str_view>();
 
-        if (channel_info.empty())
+        auto channel_info_resp = get_channel_info(channel_id, key, true);
+        channel_info = njson::parse(channel_info_resp);
+    }
+
+    //save_to_file(output_file, channel_info_resp);
+
+    if (channel_info.empty())
+    {
+        throw std::runtime_error("[ERROR] Returned json is empty, check channel name or channel id");
+    }
+
+    auto& ci_item = channel_info["items"sv][0];
+
+    njson out;
+    out["id"sv] = ci_item["id"sv];
+    out["title"sv] = ci_item["snippet"sv]["title"sv];
+    out["viewCount"sv] = ci_item["statistics"sv]["viewCount"sv];
+    out["subscriberCount"sv] = ci_item["statistics"sv]["subscriberCount"sv];
+    out["videoCount"sv] = ci_item["statistics"sv]["videoCount"sv];
+    out["items"sv] = njson::array();
+
+    cout << std::format("[INFO] Downloading info for channel '{}'"sv, out["title"sv].get<str_view>()) << endl;
+    cout << std::format("[INFO] Found {} videos"sv, out["videoCount"sv].get<str_view>()) << endl;
+    //cout << out.dump(4) << endl;
+
+    auto& uploads_playlist_id =
+        ci_item["contentDetails"sv]["relatedPlaylists"sv]["uploads"sv].get_ref<str_cref>();
+
+    string next_page_token{};
+    while (true)
+    {
+        auto playlist_items_resp = get_playlist_items(uploads_playlist_id, key, next_page_token);
+        auto playlist_items = njson::parse(playlist_items_resp);
+
+        for (const auto& playlist_item : playlist_items["items"sv])
         {
-            throw std::runtime_error("[ERROR] Returned json is empty, check channel name or channel id");
-        }
+            auto& snippet = playlist_item["snippet"sv];
 
-        auto& ci_item = channel_info["items"sv][0];
+            njson obj;
+            obj["videoId"sv] = snippet["resourceId"sv]["videoId"sv];
+            obj["title"sv] = snippet["title"sv];
+            obj["publishedAt"sv] = snippet["publishedAt"sv];
 
-        njson out;
-        out["id"sv] = ci_item["id"sv];
-        out["title"sv] = ci_item["snippet"sv]["title"sv];
-        out["viewCount"sv] = ci_item["statistics"sv]["viewCount"sv];
-        out["subscriberCount"sv] = ci_item["statistics"sv]["subscriberCount"sv];
-        out["videoCount"sv] = ci_item["statistics"sv]["videoCount"sv];
-        out["items"sv] = njson::array();
+            auto video_info_txt = get_video_info(obj["videoId"sv].get<str_view>(), key);
+            auto video_info_json = njson::parse(video_info_txt);
 
-        cout << std::format("[INFO] Downloading info for channel '{}'"sv, out["title"sv].get<str_view>()) << endl;
-        cout << std::format("[INFO] Found {} videos"sv, out["videoCount"sv].get<str_view>()) << endl;
-        //cout << out.dump(4) << endl;
+            auto& video_info_item = video_info_json["items"sv][0];
+            obj["duration"sv] = video_info_item["contentDetails"sv]["duration"sv];
+            obj["viewCount"sv] = video_info_item["statistics"sv]["viewCount"sv];
+            obj["likeCount"sv] = video_info_item["statistics"sv]["likeCount"sv];
+            obj["commentCount"sv] = video_info_item["statistics"sv]["commentCount"sv];
 
-        auto& uploads_playlist_id =
-            ci_item["contentDetails"sv]["relatedPlaylists"sv]["uploads"sv].get_ref<str_cref>();
+            cout << std::format("[INFO] [{}] {}"sv, snippet["position"sv].get<unsigned>() + 1,
+                                obj["title"sv].get<str_view>()) << endl;
 
-        string next_page_token{};
-        while (true)
-        {
-            auto playlist_items_resp = get_playlist_items(uploads_playlist_id, key, next_page_token);
-            auto playlist_items = njson::parse(playlist_items_resp);
+            out["items"sv].push_back(std::move(obj));
 
-            for (const auto& playlist_item : playlist_items["items"sv])
-            {
-                auto& snippet = playlist_item["snippet"sv];
-
-                njson obj;
-                obj["videoId"sv] = snippet["resourceId"sv]["videoId"sv];
-                obj["title"sv] = snippet["title"sv];
-                obj["publishedAt"sv] = snippet["publishedAt"sv];
-
-                auto video_info_txt = get_video_info(obj["videoId"sv].get<str_view>(), key);
-                auto video_info_json = njson::parse(video_info_txt);
-
-                auto& video_info_item = video_info_json["items"sv][0];
-                obj["duration"sv] = video_info_item["contentDetails"sv]["duration"sv];
-                obj["viewCount"sv] = video_info_item["statistics"sv]["viewCount"sv];
-                obj["likeCount"sv] = video_info_item["statistics"sv]["likeCount"sv];
-                obj["commentCount"sv] = video_info_item["statistics"sv]["commentCount"sv];
-
-                cout << std::format("[INFO] [{}] {}"sv, snippet["position"sv].get<unsigned>() + 1,
-                                    obj["title"sv].get<str_view>()) << endl;
-
-                out["items"sv].push_back(std::move(obj));
-
-                //cout << ".";
-                std::this_thread::sleep_for(10ms);
-            }
-
-            //cout << endl;
-
-            if (not playlist_items.contains("nextPageToken"sv))
-                break;
-
-            next_page_token = playlist_items["nextPageToken"sv].get<string>();
-
+            //cout << ".";
             std::this_thread::sleep_for(10ms);
         }
 
-        if (not save_to_file(output_file, out.dump(2)))
+        //cout << endl;
+
+        if (not playlist_items.contains("nextPageToken"sv))
+            break;
+
+        next_page_token = playlist_items["nextPageToken"sv].get<string>();
+
+        std::this_thread::sleep_for(10ms);
+    }
+
+    if (not save_to_file(output_file, out.dump(2)))
+    {
+        auto msg = std::format("[ERROR] Cannot save file '{}' to disk"sv,
+                               output_file);
+        throw std::runtime_error(msg);
+    }
+
+    cout << "[INFO] Done!"sv << endl;
+}
+
+
+int main(int argc, const char* argv[])
+{
+    argparse::ArgumentParser program;
+
+    try
+    {
+        parse_args(program, argc, argv);
+
+        string channel{};
+        bool by_id = false;
+
+        if (auto name = program.present("--name"sv))
         {
-            auto msg = std::format("[ERROR] Cannot save file '{}' to disk"sv,
-                                   output_file);
-            throw std::runtime_error(msg);
+            channel = name.value();
+        }
+        else if (auto id = program.present("--id"sv))
+        {
+            channel = id.value();
+            by_id = true;
+        }
+        else
+        {
+            cout << "You need to provide either '--name' or '--id'"sv << endl;
+            cout << program; // print help
+            return 1;
         }
 
-        cout << "[INFO] Done!"sv << endl;
+        const auto& output = program.get("--output"sv);
+        const auto& key = program.get("--key"sv);
+
+        download_youtube_stats(channel, output, key, by_id);
 
         return 0;
+    }
+    catch (const Arg_Parse_Exception& err)
+    {
+        cout << err.what() << endl;
+        cout << program; // print help
     }
     catch (const std::exception& e)
     {
@@ -347,66 +420,4 @@ int download_youtube_stats(str_view channel,
     }
 
     return 1;
-}
-
-
-int main(int argc, const char* argv[])
-{
-#ifdef _DEBUG
-
-    str_view channel = "Mathologer";
-    str_view output = "Mathologer.json";
-    string key = env("KEY");
-
-    return download_youtube_stats(channel, output, key, false);
-
-#else
-
-    argparse::ArgumentParser program("youtube-stat", "1.0.0");
-
-    program.add_description("Youtube Stat\n"
-                            "Download all data about uploaded video for a specific channel name or id");
-
-    program.add_argument("--name"sv)
-        .help("name of the youtube channel, the one that you can find in the url, e.g. PewDiePie, greymatter, veritasium, MrBeast6000 etc...");
-
-    program.add_argument("--id"sv)
-        .help("id of the channel if name is not available");
-
-    program.add_argument("-o"sv, "--output"sv)
-        .required()
-        .help("specify the output file");
-
-    program.add_argument("--key"sv)
-        .required()
-        .help("your youtube data api key");
-
-    if (not args_ok(program, argc, argv))
-        return 1;
-
-    string channel{};
-    bool by_id = false;
-
-    if (auto name = program.present("--name"sv))
-    {
-        channel = name.value();
-    }
-    else if (auto id = program.present("--id"sv))
-    {
-        channel = id.value();
-        by_id = true;
-    }
-    else
-    {
-        cout << "You need to provide either --name or --id"sv << endl;
-        cout << program; // print help
-        return 1;
-    }
-
-    const auto output = program.get("--output"sv);
-    const auto key = program.get("--key"sv);
-
-    return download_youtube_stats(channel, output, key, by_id);
-
-#endif    
 }
