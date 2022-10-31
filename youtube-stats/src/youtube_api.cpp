@@ -40,7 +40,7 @@ string YoutubeAPI::get_channel_id(str_view channel_name)
 }
 
 string YoutubeAPI::get_channel_info(str_view channel,
-                                      bool by_id)
+                                    bool by_id)
 {
     using cpr::AcceptEncodingMethods::deflate;
     using cpr::AcceptEncodingMethods::gzip;
@@ -77,7 +77,7 @@ string YoutubeAPI::get_channel_info(str_view channel,
 }
 
 string YoutubeAPI::get_playlist_items(str_view playlist_id,
-                                        str_view next_page_token)
+                                      str_view next_page_token)
 {
     using cpr::AcceptEncodingMethods::deflate;
     using cpr::AcceptEncodingMethods::gzip;

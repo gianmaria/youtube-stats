@@ -8,7 +8,7 @@ class YoutubeAPI
 public:
 
     explicit YoutubeAPI(string api_key);
-    
+
     string get_channel_id(str_view channel_name);
 
     string get_channel_info(str_view channel,
