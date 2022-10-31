@@ -1,8 +1,12 @@
 #pragma once
 
+#include <string>
+#include <string_view>
+
 class YoutubeAPI
 {
 public:
+
     explicit YoutubeAPI(string api_key);
     
     string get_channel_id(str_view channel_name);
