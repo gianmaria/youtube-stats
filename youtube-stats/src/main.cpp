@@ -12,24 +12,19 @@ bool parse_args(argparse::ArgumentParser& program,
 
         program.add_description("Youtube Stat\n"
                                 "Download all data about uploaded "
-                                "video for a specific channel name or id.");
+                                "video for a specific channel id.");
 
-        program.add_argument("--name"sv)
-            .help("name of the youtube channel, "
-                  "the one that you can find in the url, "
-                  "e.g. PewDiePie, greymatter, veritasium, "
-                  "MrBeast6000 etc...");
+        program.add_argument("-q"sv, "--query"sv)
+            .help("query the channel id for the youtube channel name");
 
         program.add_argument("--id"sv)
-            .help("id of the channel if name is not available");
+            .help("id of the channel");
+
+        program.add_argument("-k"sv, "--key"sv)
+            .help("your youtube data api key");
 
         program.add_argument("-o"sv, "--output"sv)
-            .required()
             .help("specify the output file");
-
-        program.add_argument("--key"sv)
-            .required()
-            .help("your youtube data api key");
 
         program.parse_args(argc, argv);
 
