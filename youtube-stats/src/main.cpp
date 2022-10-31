@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "youtube_stats.hpp"
+#include "youtube_api.hpp"
 #include "utils.hpp"
 
 void download_youtube_stats(str_view channel,
@@ -9,7 +9,7 @@ void download_youtube_stats(str_view channel,
                             bool by_id)
 {
 
-    YoutubeStats yt{string(key.begin(), key.end())};
+    YoutubeAPI yt{string(key.begin(), key.end())};
 
     njson channel_info;
 

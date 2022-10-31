@@ -1,14 +1,14 @@
 #include "pch.h"
 
-#include "youtube_stats.hpp"
+#include "youtube_api.hpp"
 #include "utils.hpp"
 
-YoutubeStats::YoutubeStats(string api_key) :
+YoutubeAPI::YoutubeAPI(string api_key) :
     api_key(std::move(api_key))
 {
 }
 
-string YoutubeStats::get_channel_id(str_view channel_name)
+string YoutubeAPI::get_channel_id(str_view channel_name)
 {
     using cpr::AcceptEncodingMethods::deflate;
     using cpr::AcceptEncodingMethods::gzip;
@@ -39,7 +39,7 @@ string YoutubeStats::get_channel_id(str_view channel_name)
     return resp.text;
 }
 
-string YoutubeStats::get_channel_info(str_view channel,
+string YoutubeAPI::get_channel_info(str_view channel,
                                       bool by_id)
 {
     using cpr::AcceptEncodingMethods::deflate;
@@ -76,7 +76,7 @@ string YoutubeStats::get_channel_info(str_view channel,
     return resp.text;
 }
 
-string YoutubeStats::get_playlist_items(str_view playlist_id,
+string YoutubeAPI::get_playlist_items(str_view playlist_id,
                                         str_view next_page_token)
 {
     using cpr::AcceptEncodingMethods::deflate;
@@ -110,7 +110,7 @@ string YoutubeStats::get_playlist_items(str_view playlist_id,
     return resp.text;
 }
 
-string YoutubeStats::get_video_info(str_view video_id)
+string YoutubeAPI::get_video_info(str_view video_id)
 {
     using cpr::AcceptEncodingMethods::deflate;
     using cpr::AcceptEncodingMethods::gzip;

@@ -1,9 +1,9 @@
 #pragma once
 
-class YoutubeStats
+class YoutubeAPI
 {
 public:
-    explicit YoutubeStats(string api_key);
+    explicit YoutubeAPI(string api_key);
     
     string get_channel_id(str_view channel_name);
 
