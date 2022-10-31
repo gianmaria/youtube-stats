@@ -8,6 +8,11 @@ YoutubeAPI::YoutubeAPI(string api_key) :
 {
 }
 
+YoutubeAPI::YoutubeAPI(str_view api_key) :
+    api_key(api_key.begin(), api_key.end())
+{
+}
+
 string YoutubeAPI::get_channel_id(str_view channel_name)
 {
     using cpr::AcceptEncodingMethods::deflate;
@@ -19,9 +24,10 @@ string YoutubeAPI::get_channel_id(str_view channel_name)
     {
          {"key", api_key},
          {"part", "snippet"},
-         {"fields", "nextPageToken,items(snippet(channelId,title,channelTitle))"},
+         {"fields", "pageInfo(totalResults),nextPageToken,items(snippet(channelId,title,channelTitle))"},
          {"type", "channel"},
          {"order", "relevance"},
+         {"safeSearch", "none"},
          {"maxResults", "50"},
          {"q", string(channel_name.begin(), channel_name.end())},
     };
