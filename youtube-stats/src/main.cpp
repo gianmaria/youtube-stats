@@ -3,6 +3,8 @@
 #include "youtube_api.hpp"
 #include "utils.hpp"
 
+[[noreturn]] extern void run_tests();
+
 int main(int argc, const char* argv[])
 {
     argparse::ArgumentParser program;
@@ -15,35 +17,35 @@ int main(int argc, const char* argv[])
         }
 
         string channel{};
-        bool by_id = false;
 
-        if (auto name = program.present("--name"sv))
+        auto query = program.present("-q"sv);
+        auto key = program.present("-k"sv);
+        auto id = program.present("-id"sv);
+        auto output = program.present("-o"sv);
+
+        if (query.has_value() and
+            key.has_value())
         {
-            channel = name.value();
+            utils::query_channel_id_by_channel_name(*query, *key);
         }
-        else if (auto id = program.present("--id"sv))
+        else if (id.has_value() and
+                 key.has_value() and
+                 output.has_value())
         {
-            channel = id.value();
-            by_id = true;
-        }
+            utils::download_channel_stats(*id, *output, *key);
+        }   
         else
         {
-            cout << "You need to provide either '--name' or '--id'"sv << endl;
             cout << program; // print help
             return 1;
         }
-
-        const auto& output = program.get("--output"sv);
-        const auto& key = program.get("--key"sv);
-
-        utils::download_channel_stats(channel, output, key, by_id);
 
         return 0;
     }
     catch (const std::exception& e)
     {
-        cout << e.what() << endl;
-    }
+        cout << "[EXCEPTION]" << e.what() << endl;
 
-    return 1;
+        return 1;
+    }
 }

@@ -45,8 +45,7 @@ string YoutubeAPI::get_channel_id(str_view channel_name)
     return resp.text;
 }
 
-string YoutubeAPI::get_channel_info(str_view channel,
-                                    bool by_id)
+string YoutubeAPI::get_channel_info(str_view channel_id)
 {
     using cpr::AcceptEncodingMethods::deflate;
     using cpr::AcceptEncodingMethods::gzip;
@@ -57,17 +56,10 @@ string YoutubeAPI::get_channel_info(str_view channel,
     {
          {"key", api_key},
          {"part", "snippet,contentDetails,statistics"},
-         {"fields", "items(statistics(viewCount,subscriberCount,videoCount),snippet(title),id,contentDetails(relatedPlaylists(uploads)))"},
+         {"fields", "items(statistics(viewCount,subscriberCount,videoCount),"
+            "snippet(title),id,contentDetails(relatedPlaylists(uploads)))"},
+         {"id", string(channel_id.begin(), channel_id.end())},
     };
-
-    if (by_id)
-    {
-        params.Add({"id", string(channel.begin(), channel.end())});
-    }
-    else
-    {
-        params.Add({"forUsername", string(channel.begin(), channel.end())});
-    }
 
     auto accept_encoding = cpr::AcceptEncoding{{deflate, gzip, zlib}};
 

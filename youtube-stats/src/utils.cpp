@@ -5,6 +5,7 @@
 
 namespace utils
 {
+
 string env(string_view name)
 {
     auto split_line = [](str_cref line)
@@ -56,7 +57,12 @@ bool save_to_file(str_view path,
     if (ofs.is_open())
     {
         ofs << content;
-        return true;
+
+        bool success =
+            ofs.good() and
+            not (ofs.fail() or ofs.bad());
+
+        return success;
     }
 
     return false;
@@ -74,7 +80,7 @@ bool parse_args(argparse::ArgumentParser& program,
                                 "video for a specific channel id.");
 
         program.add_argument("-q"sv, "--query"sv)
-            .help("query the channel id for the youtube channel name");
+            .help("find channel id by channel name");
 
         program.add_argument("-id"sv)
             .help("id of the channel");
@@ -110,55 +116,43 @@ void query_channel_id_by_channel_name(str_view channel_name,
     {
         throw std::runtime_error("[ERROR] Returned json is empty, channel name not found");
     }
-    else if (search["items"sv].size() == 1)
-    {
-        auto channel_id = search["items"sv][0]["snippet"sv]["channelId"sv].get<str_view>();
-        auto channel_title = search["items"sv][0]["snippet"sv]["channelTitle"sv].get<str_view>();
-        cout << "found channel id: " << channel_id << " with channel title: " << channel_title << endl;
-    }
     else
     {
-        string buffer;
-        buffer.reserve(2048);
-
         auto total_res = search["pageInfo"]["totalResults"].get<size_t>();
 
-        std::format_to(std::back_inserter(buffer),
-                       R"(Found {} results for channel name "{}"\n)"sv,
-                       total_res, channel_name);
+        cout << std::format(R"([INFO] Found {:L} results for channel "{}" (showing only first 50 results))"sv,
+                            total_res, channel_name) << endl;
 
         unsigned counter = 1;
         for (const auto& item : search["items"sv])
         {
             const auto& snippet = item["snippet"sv];
-
-            std::format_to(std::back_inserter(buffer),
-                           R"(   [{}] id: {} - "{}" - https://www.youtube.com/channel/{}\n)"sv,
-                           counter++,
-                           snippet["channelId"sv].get<str_view>(),
-                           snippet["channelTitle"sv].get<str_view>(),
-                           snippet["channelId"sv].get<str_view>()
-            );
+            size_t max_str_len = 50;
+            cout << std::format(R"(   [{:02}] id: {} - {: <{}} - https://www.youtube.com/channel/{})"sv,
+                                counter++,
+                                snippet["channelId"sv].get<str_view>(),
+                                snippet["channelTitle"sv].get<str_view>().substr(0, max_str_len), max_str_len,
+                                snippet["channelId"sv].get<str_view>()
+            ) << endl;
         }
     }
 }
 
-void download_channel_stats(str_view channel,
+void download_channel_stats(str_view channel_id,
                             str_view output_file,
-                            str_view key,
-                            bool by_id)
+                            str_view key)
 {
 
-    YoutubeAPI yt{string(key.begin(), key.end())};
+    YoutubeAPI yt{key};
 
-    auto channel_info_resp = yt.get_channel_info(channel, by_id);
+    auto channel_info_resp = yt.get_channel_info(channel_id);
     njson channel_info = njson::parse(channel_info_resp);
 
     //save_to_file(output_file, channel_info_resp);
 
     if (channel_info.empty())
     {
-        throw std::runtime_error("[ERROR] Returned json is empty, check channel name or channel id");
+        throw std::runtime_error("[ERROR] Returned json is empty, check channel id");
     }
 
     auto& ci_item = channel_info["items"sv][0];
@@ -178,7 +172,7 @@ void download_channel_stats(str_view channel,
     auto& uploads_playlist_id =
         ci_item["contentDetails"sv]["relatedPlaylists"sv]["uploads"sv].get_ref<str_cref>();
 
-    string next_page_token{};
+    string next_page_token;
     while (true)
     {
         auto playlist_items_resp = yt.get_playlist_items(uploads_playlist_id, next_page_token);
@@ -214,7 +208,7 @@ void download_channel_stats(str_view channel,
         //cout << endl;
 
         if (not playlist_items.contains("nextPageToken"sv))
-            break;
+            break; // we are done no more results
 
         next_page_token = playlist_items["nextPageToken"sv].get<string>();
 
