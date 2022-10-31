@@ -191,25 +191,8 @@ string get_video_info(str_view video_id,
     return resp.text;
 }
 
-class Arg_Parse_Exception : public std::exception
-{
-public:
-    using super = std::exception;
-
-    explicit Arg_Parse_Exception(const string& message)
-        : super(message.c_str())
-    {
-    }
-
-    explicit Arg_Parse_Exception(const char* message)
-        : super(message)
-    {
-    }
-};
-
-void parse_args(argparse::ArgumentParser& program,
-                int argc,
-                const char* argv[])
+bool parse_args_ok(argparse::ArgumentParser& program,
+                   int argc, const char* argv[])
 {
     try
     {
@@ -237,10 +220,15 @@ void parse_args(argparse::ArgumentParser& program,
             .help("your youtube data api key");
 
         program.parse_args(argc, argv);
+
+        return true;
     }
     catch (const std::runtime_error& err)
     {
-        throw Arg_Parse_Exception(err.what());
+        cout << err.what();
+        cout << program; // print help
+
+        return false;
     }
 }
 
@@ -381,7 +369,10 @@ int main(int argc, const char* argv[])
 
     try
     {
-        parse_args(program, argc, argv);
+        if (not parse_args_ok(program, argc, argv))
+        {
+            return 1;
+        }
 
         string channel{};
         bool by_id = false;
@@ -408,11 +399,6 @@ int main(int argc, const char* argv[])
         download_youtube_stats(channel, output, key, by_id);
 
         return 0;
-    }
-    catch (const Arg_Parse_Exception& err)
-    {
-        cout << err.what() << endl;
-        cout << program; // print help
     }
     catch (const std::exception& e)
     {
