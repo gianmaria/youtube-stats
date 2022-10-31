@@ -3,6 +3,47 @@
 #include "youtube_api.hpp"
 #include "utils.hpp"
 
+bool parse_args(argparse::ArgumentParser& program,
+                int argc, const char* argv[])
+{
+    try
+    {
+        program = argparse::ArgumentParser("youtube-stat", "1.0.0");
+
+        program.add_description("Youtube Stat\n"
+                                "Download all data about uploaded "
+                                "video for a specific channel name or id.");
+
+        program.add_argument("--name"sv)
+            .help("name of the youtube channel, "
+                  "the one that you can find in the url, "
+                  "e.g. PewDiePie, greymatter, veritasium, "
+                  "MrBeast6000 etc...");
+
+        program.add_argument("--id"sv)
+            .help("id of the channel if name is not available");
+
+        program.add_argument("-o"sv, "--output"sv)
+            .required()
+            .help("specify the output file");
+
+        program.add_argument("--key"sv)
+            .required()
+            .help("your youtube data api key");
+
+        program.parse_args(argc, argv);
+
+        return true;
+    }
+    catch (const std::runtime_error& err)
+    {
+        cout << err.what();
+        cout << program; // print help
+
+        return false;
+    }
+}
+
 void download_youtube_stats(str_view channel,
                             str_view output_file,
                             str_view key,
@@ -137,14 +178,13 @@ void download_youtube_stats(str_view channel,
 }
 
 
-
 int main(int argc, const char* argv[])
 {
     argparse::ArgumentParser program;
 
     try
     {
-        if (not utils::parse_args(program, argc, argv))
+        if (not parse_args(program, argc, argv))
         {
             return 1;
         }
