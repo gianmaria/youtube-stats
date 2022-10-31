@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "youtube_stats.hpp"
+#include "utils.hpp"
 
 int main(int argc, const char* argv[])
 {
@@ -8,7 +9,7 @@ int main(int argc, const char* argv[])
 
     try
     {
-        if (not parse_args(program, argc, argv))
+        if (not utils::parse_args(program, argc, argv))
         {
             return 1;
         }
