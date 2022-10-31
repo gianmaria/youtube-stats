@@ -8,7 +8,7 @@ int main(int argc, const char* argv[])
 
     try
     {
-        if (not parse_args_ok(program, argc, argv))
+        if (not parse_args(program, argc, argv))
         {
             return 1;
         }

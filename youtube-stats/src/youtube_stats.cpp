@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "youtube_stats.hpp"
+
 string env(string_view name)
 {
     auto split_line = [](str_cref line)
@@ -191,7 +193,7 @@ string get_video_info(str_view video_id,
     return resp.text;
 }
 
-bool parse_args_ok(argparse::ArgumentParser& program,
+bool parse_args(argparse::ArgumentParser& program,
                    int argc, const char* argv[])
 {
     try
@@ -235,7 +237,7 @@ bool parse_args_ok(argparse::ArgumentParser& program,
 void download_youtube_stats(str_view channel,
                             str_view output_file,
                             str_view key,
-                            bool by_id = false)
+                            bool by_id)
 {
     njson channel_info;
 
