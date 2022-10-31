@@ -44,7 +44,7 @@ bool parse_args(argparse::ArgumentParser& program,
     }
 }
 
-void download_youtube_stats(str_view channel,
+void download_channel_stats(str_view channel,
                             str_view output_file,
                             str_view key,
                             bool by_id)
@@ -211,7 +211,7 @@ int main(int argc, const char* argv[])
         const auto& output = program.get("--output"sv);
         const auto& key = program.get("--key"sv);
 
-        download_youtube_stats(channel, output, key, by_id);
+        download_channel_stats(channel, output, key, by_id);
 
         return 0;
     }
