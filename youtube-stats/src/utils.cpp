@@ -114,13 +114,13 @@ void query_channel_id_by_channel_name(str_view channel_name,
 
     if (search.empty())
     {
-        throw std::runtime_error("[ERROR] Returned json is empty, channel name not found");
+        throw std::runtime_error("Returned json is empty, channel name not found");
     }
     else
     {
         auto total_res = search["pageInfo"]["totalResults"].get<size_t>();
 
-        cout << std::format(R"([INFO] Found {:L} results for channel "{}" (showing only first 50 results))"sv,
+        cout << std::format(R"(Found {:L} results for channel "{}" (showing only first 50 results))"sv,
                             total_res, channel_name) << endl;
 
         unsigned counter = 1;
@@ -165,8 +165,8 @@ void download_channel_stats(str_view channel_id,
     out["videoCount"sv] = ci_item["statistics"sv]["videoCount"sv];
     out["items"sv] = njson::array();
 
-    cout << std::format("[INFO] Downloading info for channel '{}'"sv, out["title"sv].get<str_view>()) << endl;
-    cout << std::format("[INFO] Found {} videos"sv, out["videoCount"sv].get<str_view>()) << endl;
+    cout << std::format("Downloading info for channel \"{}\""sv, out["title"sv].get<str_view>()) << endl;
+    cout << std::format("Found {} videos"sv, out["videoCount"sv].get<str_view>()) << endl;
     //cout << out.dump(4) << endl;
 
     auto& uploads_playlist_id =
@@ -196,7 +196,7 @@ void download_channel_stats(str_view channel_id,
             obj["likeCount"sv] = video_info_item["statistics"sv]["likeCount"sv];
             obj["commentCount"sv] = video_info_item["statistics"sv]["commentCount"sv];
 
-            cout << std::format("[INFO] [{}] {}"sv, snippet["position"sv].get<unsigned>() + 1,
+            cout << std::format("    [{}] {}"sv, snippet["position"sv].get<unsigned>() + 1,
                                 obj["title"sv].get<str_view>()) << endl;
 
             out["items"sv].push_back(std::move(obj));
@@ -217,12 +217,12 @@ void download_channel_stats(str_view channel_id,
 
     if (not utils::save_to_file(output_file, out.dump(2)))
     {
-        auto msg = std::format("[ERROR] Cannot save file '{}' to disk"sv,
+        auto msg = std::format("Cannot save file '{}' to disk"sv,
                                output_file);
         throw std::runtime_error(msg);
     }
 
-    cout << "[INFO] Done!"sv << endl;
+    cout << "Done!"sv << endl;
 }
 
 

@@ -23,7 +23,7 @@
     }
     catch (const std::exception& e)
     {
-        cout << "[EXCEPTION]" << e.what() << endl;
+        cout << "[TEST EXCEPTION]" << e.what() << endl;
     }
 
     std::exit(0);

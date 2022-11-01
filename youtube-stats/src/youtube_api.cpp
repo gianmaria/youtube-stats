@@ -38,7 +38,7 @@ string YoutubeAPI::get_channel_id(str_view channel_name)
 
     if (resp.status_code != 200)
     {
-        auto msg = std::format("[ERROR] {} - {}\n{}"sv, resp.status_code, resp.reason, resp.text);
+        auto msg = std::format("{} - {}\n{}"sv, resp.status_code, resp.reason, resp.text);
         throw std::runtime_error(msg);
     }
 
@@ -67,7 +67,7 @@ string YoutubeAPI::get_channel_info(str_view channel_id)
 
     if (resp.status_code != 200)
     {
-        auto msg = std::format("[ERROR] {} - {}\n{}"sv, resp.status_code, resp.reason, resp.text);
+        auto msg = std::format("{} - {}\n{}"sv, resp.status_code, resp.reason, resp.text);
         throw std::runtime_error(msg);
     }
 
@@ -101,7 +101,7 @@ string YoutubeAPI::get_playlist_items(str_view playlist_id,
 
     if (resp.status_code != 200)
     {
-        auto msg = std::format("[ERROR] {} - {}\n{}"sv, resp.status_code, resp.reason, resp.text);
+        auto msg = std::format("{} - {}\n{}"sv, resp.status_code, resp.reason, resp.text);
         throw std::runtime_error(msg);
     }
 
@@ -128,7 +128,7 @@ string YoutubeAPI::get_video_info(str_view video_id)
 
     if (resp.status_code != 200)
     {
-        auto msg = std::format("[ERROR] {} - {}\n{}"sv, resp.status_code, resp.reason, resp.text);
+        auto msg = std::format("{} - {}\n{}"sv, resp.status_code, resp.reason, resp.text);
         throw std::runtime_error(msg);
     }
 
