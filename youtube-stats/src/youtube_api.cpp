@@ -3,6 +3,11 @@
 #include "youtube_api.hpp"
 #include "utils.hpp"
 
+cpr::AcceptEncoding YoutubeAPI::accept_encoding = cpr::AcceptEncoding{{
+        cpr::AcceptEncodingMethods::deflate,
+        cpr::AcceptEncodingMethods::gzip,
+        cpr::AcceptEncodingMethods::zlib}};
+
 YoutubeAPI::YoutubeAPI(string api_key) :
     api_key(std::move(api_key))
 {
@@ -15,10 +20,6 @@ YoutubeAPI::YoutubeAPI(str_view api_key) :
 
 string YoutubeAPI::get_channel_id(str_view channel_name)
 {
-    using cpr::AcceptEncodingMethods::deflate;
-    using cpr::AcceptEncodingMethods::gzip;
-    using cpr::AcceptEncodingMethods::zlib;
-
     auto base_url = cpr::Url{"https://youtube.googleapis.com/youtube/v3/search"};
     auto params = cpr::Parameters
     {
@@ -31,8 +32,6 @@ string YoutubeAPI::get_channel_id(str_view channel_name)
          {"maxResults", "50"},
          {"q", string(channel_name.begin(), channel_name.end())},
     };
-
-    auto accept_encoding = cpr::AcceptEncoding{{deflate, gzip, zlib}};
 
     cpr::Response resp = cpr::Get(base_url, params, accept_encoding);
 
@@ -47,10 +46,6 @@ string YoutubeAPI::get_channel_id(str_view channel_name)
 
 string YoutubeAPI::get_channel_info(str_view channel_id)
 {
-    using cpr::AcceptEncodingMethods::deflate;
-    using cpr::AcceptEncodingMethods::gzip;
-    using cpr::AcceptEncodingMethods::zlib;
-
     auto base_url = cpr::Url{"https://www.googleapis.com/youtube/v3/channels"};
     auto params = cpr::Parameters
     {
@@ -60,8 +55,6 @@ string YoutubeAPI::get_channel_info(str_view channel_id)
             "snippet(title),id,contentDetails(relatedPlaylists(uploads)))"},
          {"id", string(channel_id.begin(), channel_id.end())},
     };
-
-    auto accept_encoding = cpr::AcceptEncoding{{deflate, gzip, zlib}};
 
     cpr::Response resp = cpr::Get(base_url, params, accept_encoding);
 
@@ -77,10 +70,6 @@ string YoutubeAPI::get_channel_info(str_view channel_id)
 string YoutubeAPI::get_playlist_items(str_view playlist_id,
                                       str_view next_page_token)
 {
-    using cpr::AcceptEncodingMethods::deflate;
-    using cpr::AcceptEncodingMethods::gzip;
-    using cpr::AcceptEncodingMethods::zlib;
-
     auto base_url = cpr::Url{"https://www.googleapis.com/youtube/v3/playlistItems"};
     auto params = cpr::Parameters
     {
@@ -90,7 +79,6 @@ string YoutubeAPI::get_playlist_items(str_view playlist_id,
          {"playlistId", string(playlist_id.begin(), playlist_id.end())},
          {"maxResults", "50"}
     };
-    auto accept_encoding = cpr::AcceptEncoding{{deflate, gzip, zlib}};
 
     if (next_page_token != "")
     {
@@ -110,10 +98,6 @@ string YoutubeAPI::get_playlist_items(str_view playlist_id,
 
 string YoutubeAPI::get_video_info(str_view video_id)
 {
-    using cpr::AcceptEncodingMethods::deflate;
-    using cpr::AcceptEncodingMethods::gzip;
-    using cpr::AcceptEncodingMethods::zlib;
-
     auto base_url = cpr::Url{"https://www.googleapis.com/youtube/v3/videos"};
     auto params = cpr::Parameters
     {
@@ -122,7 +106,6 @@ string YoutubeAPI::get_video_info(str_view video_id)
          {"fields", "items(id,snippet(title),contentDetails(duration),statistics(viewCount,likeCount,commentCount))"},
          {"id", string(video_id.begin(), video_id.end())}
     };
-    auto accept_encoding = cpr::AcceptEncoding{{deflate, gzip, zlib}};
 
     cpr::Response resp = cpr::Get(base_url, params, accept_encoding);
 

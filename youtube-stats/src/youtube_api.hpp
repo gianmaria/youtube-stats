@@ -6,8 +6,8 @@
 class YoutubeAPI
 {
 public:
-
     explicit YoutubeAPI(string api_key);
+
     explicit YoutubeAPI(str_view api_key);
 
     string get_channel_id(str_view channel_name);
@@ -20,7 +20,6 @@ public:
     string get_video_info(str_view video_id);
 
 private:
-
     string api_key;
+    static cpr::AcceptEncoding accept_encoding;
 };
-
