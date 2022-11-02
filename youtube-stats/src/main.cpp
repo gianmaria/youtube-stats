@@ -7,14 +7,18 @@
 
 int main(int argc, const char* argv[])
 {
-    argparse::ArgumentParser program;
-
     try
     {
-        if (not utils::parse_args(program, argc, argv))
+        auto res = utils::parse_args(argc, argv);
+        
+        if (std::holds_alternative<utils::Error>(res))
         {
+            auto& err = std::get<utils::Error>(res);
+            cout << err.description << endl;
             return 1;
         }
+
+        auto program = std::get<argparse::ArgumentParser>(res);
 
         string channel{};
 

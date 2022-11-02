@@ -68,16 +68,25 @@ bool save_to_file(str_view path,
     return false;
 }
 
-bool parse_args(argparse::ArgumentParser& program,
-                int argc, const char* argv[])
+ResultOrError<argparse::ArgumentParser>
+parse_args(int argc, const char* argv[])
 {
+    argparse::ArgumentParser program;
+
     try
     {
         program = argparse::ArgumentParser("youtube-stat", "1.0.0");
-
+        
         program.add_description("Youtube Stat\n"
                                 "Download all data about uploaded "
                                 "video for a specific channel id.");
+        program.add_epilog(
+            "Examples:\n"
+            "youtube-stat -k API_KEY -q vsauce"
+            "                                   # get the channel id from channel name\n"
+            "youtube-stat -k API_KEY -id UC6nSFpj9HTCZ5t-N3Rm3-HA -o vsauce.json "
+            "# save all the info about the uploaded video of vsauce\n"
+        );
 
         program.add_argument("-q"sv, "--query"sv)
             .help("find channel id by channel name");
@@ -86,21 +95,18 @@ bool parse_args(argparse::ArgumentParser& program,
             .help("id of the channel");
 
         program.add_argument("-k"sv, "--key"sv)
-            .help("your youtube data api key");
+            .help("your youtube data api key (https://developers.google.com/youtube/v3/getting-started)");
 
         program.add_argument("-o"sv, "--output"sv)
             .help("specify the output file");
 
         program.parse_args(argc, argv);
 
-        return true;
+        return program;
     }
     catch (const std::runtime_error& err)
     {
-        cout << err.what();
-        cout << program; // print help
-
-        return false;
+        return Error{string(err.what()) + program.help().str()};
     }
 }
 
